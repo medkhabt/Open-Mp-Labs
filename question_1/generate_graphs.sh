@@ -46,7 +46,7 @@ done < $temp_folder/.sequential_files_to_compile.tmp
 echo "End of compilation" 
 
 # Create test cases and run them 
-num_steps=(1000000 100000000 ) #10000000000 1000000000000)
+num_steps=(10000 1000000) #100000000  10000000000 1000000000000)
 num_cores=(1 2 4 8)
 num_repeats=10
 while IFS= read -r line 
@@ -78,6 +78,7 @@ ls stats/csv -pl | grep -v / | awk '{if(NR-1 > 0) print $NF }' > $temp_folder/.c
 
 while IFS= read -r line 
 do 
+## **** GENERATE SPEEDUP DAT FILES *** 
 sed 's/,/ /g' stats/csv/$line | awk '{
     key = $2 + 50 * $1; 
     sum[key]+=$3 ; N[key]++; cores[key]=$1; num_repeats[key]=$2; 
@@ -86,7 +87,7 @@ sed 's/,/ /g' stats/csv/$line | awk '{
 	avg = sum[k]/N[k];
 	printf "%s %s %f\n", cores[k], num_repeats[k], avg;
     }
-}'> .tmp_dat_$line
+}'> .tmp_dat_$line.tmp
  awk '
 {
     if($1==1){
@@ -97,13 +98,19 @@ sed 's/,/ /g' stats/csv/$line | awk '{
 	while(getline < FILENAME){
 	   print($1, $2, start[$2]/$3)
 	}
-}' .tmp_dat_$line |  sort -k2,2 -k1 > graphs/.generator/.data/${line}_speed_up.dat   
+}' .tmp_dat_$line.tmp |  sort -k2,2 -k1 > graphs/.generator/.data/${line}_speed_up.dat   
+## ****** GENERATE CPU TIME DAT FILES **** 
+sed 's/,/ /g' stats/csv/$line | awk '{
+    key = $2 + 50 * $1; 
+    sum[key]+=$3 ; N[key]++; cores[key]=$1; num_repeats[key]=$2; 
+} END {
+    for (k in sum) {
+	avg = sum[k]/N[k];
+	printf "%s %s %f\n", cores[k], num_repeats[k], avg;
+    }
+}' | sort -k2,2 -k1 > graphs/.generator/.data/${line}.dat   
 
-
-
-
-
-
+## ************* GENERATE DEM FILES FOR GNUPLOT ****
 
 echo -e  "set term png size 1280,720\nset output '../${line}__speed_up.png'\nset logscale y\n set key left top" >> graphs/.generator/generate_${line}_speed_up_plot.dem
 
@@ -113,11 +120,7 @@ echo -n "plot " >> graphs/.generator/generate_${line}_speed_up_plot.dem
 	echo -n "\".data/${line}_speed_up.dat\" using 1:(\$2==$step ? \$3:NaN) title \"n_iterations: $step\" with lp,"  >> graphs/.generator/generate_${line}_speed_up_plot.dem
 
 # TODO remove the sequential case from the geneartion of the graph ? 
-    cd graphs/.generator
-    echo " the line is $line"
-    gnuplot generate_${line}_speed_up_plot.dem
-    # Get back to the root folder.
-    cd ../..
+    
     done
 echo 
 done < $temp_folder/.csv_stat_files.tmp
@@ -131,8 +134,29 @@ echo "End the generation of graphs"
 ## - get all the names of the dat files of the executions.
 ## - give a plot for each dat file ( we should filter out the other iterations that are not relevant to the iteration choosen in the current loop iteration ( yeah i know i used a lot the word iteration..)
 # CREATION OF the dem file to get ploted.
+ls graphs/.generator/.data/ -pl | grep -v / | awk '{if(NR-1 > 0) print $NF}' | grep -v "speed_up" > .file_dat_not_speed_up.tmp
+echo " the files present in data folder that are not speed up are" 
 
-# all what comes before the plot 
-# the actual plot 
-# Remove the temp files 
+for step in ${num_steps[@]}; do 
+     echo -e  "set term png size 1280,720\nset output '../${step}.png'\nset logscale y\n set key left top" >> graphs/.generator/generate_${step}_graph.dem
+
+    echo -n "plot " >> graphs/.generator/generate_${step}_graph.dem
+
+    while IFS= read -r line  
+    do 
+
+	echo -n "\".data/$line\" using 1:(\$2==$step ? \$3:NaN) title \"implementation: $line\" with lp,"  >> graphs/.generator/generate_${step}_graph.dem
+    # we should be sorting with the second element 
+    done < .file_dat_not_speed_up.tmp
+done 
+
+## FINALLY PLOT THE GRAPHS.
+cd graphs/.generator
+gnuplot * 
+# Get back to the root folder.
+cd ../..
+
+
+
 rm .[!.]*tmp
+rm -r .tmp[!.]*
