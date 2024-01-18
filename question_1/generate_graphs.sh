@@ -159,4 +159,4 @@ cd ../..
 
 
 rm .[!.]*tmp
-rm -r .tmp[!.]*
+rm -r .temp[!.]*
