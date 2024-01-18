@@ -46,9 +46,9 @@ done < $temp_folder/.sequential_files_to_compile.tmp
 echo "End of compilation" 
 
 # Create test cases and run them 
-num_steps=(1000000 100000000 10000000000 1000000000000)
+num_steps=(1000000 100000000 ) #10000000000 1000000000000)
 num_cores=(1 2 4 8)
-num_repeats=2
+num_repeats=10
 while IFS= read -r line 
 do
     echo "*********** file: $line *******"
@@ -57,20 +57,15 @@ do
 
     for step in ${num_steps[@]}; do 
 	for core in ${num_cores[@]}; do 
-	    for ((repeat=0; repeat<=$num_repeats; repeat++)) ; do 
+	    for ((repeat=0; repeat<$num_repeats; repeat++)) ; do 
 		echo "num_repeats is ${num_repeats}"
 		echo "step ${step}, core ${core}, repeat ${repeat}"
 		let "index = $step * 4 * 10 +  $core * 10 + $repeat"
-		./target/${line} -C ${core} -N ${step} &
-		pids[${index}]=$! 
+		./target/${line} -C ${core} -N ${step} 
 # does it work also for the sequential target 
 	    done # end repeat loop 
 	done # end core loop 
     done # end step loop 
-# TODO block here before change the name of the stats.csv ( acutally they were no stats generated as the first execution didn't finish when arriving here so the stats.csv wasn't created.
-    for pid in ${pids[*]};do 
-	wait $pid 
-    done 
     mv stats.csv stats/csv/${line}_stats.csv
     # wait $!
     echo "End tests"
@@ -110,7 +105,7 @@ sed 's/,/ /g' stats/csv/$line | awk '{
 
 
 
-echo -e  "set term png size 1280,720\nset output '../${line}__speed_up.png'\n#set logscale y\n set key left top" >> graphs/.generator/generate_${line}_speed_up_plot.dem
+echo -e  "set term png size 1280,720\nset output '../${line}__speed_up.png'\nset logscale y\n set key left top" >> graphs/.generator/generate_${line}_speed_up_plot.dem
 
 echo -n "plot " >> graphs/.generator/generate_${line}_speed_up_plot.dem
     for step in ${num_steps[@]}; do 
@@ -129,6 +124,12 @@ done < $temp_folder/.csv_stat_files.tmp
 
 echo "End the generation of graphs"
 
+## LOOP ON num_steps
+## To create a graph that have all the implementation execution time for each step.
+## TO do so 
+## - create a dem file for each iteration .
+## - get all the names of the dat files of the executions.
+## - give a plot for each dat file ( we should filter out the other iterations that are not relevant to the iteration choosen in the current loop iteration ( yeah i know i used a lot the word iteration..)
 # CREATION OF the dem file to get ploted.
 
 # all what comes before the plot 
