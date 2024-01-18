@@ -110,7 +110,7 @@ sed 's/,/ /g' stats/csv/$line | awk '{
 
 
 
-echo -e  "set term png size 1280,720\nset output '../${line}__speed_up.png'\nset logscale y\n set key left top" >> graphs/.generator/generate_${line}_speed_up_plot.dem
+echo -e  "set term png size 1280,720\nset output '../${line}__speed_up.png'\n#set logscale y\n set key left top" >> graphs/.generator/generate_${line}_speed_up_plot.dem
 
 echo -n "plot " >> graphs/.generator/generate_${line}_speed_up_plot.dem
     for step in ${num_steps[@]}; do 
